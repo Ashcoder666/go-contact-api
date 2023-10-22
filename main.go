@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -27,7 +27,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/contact", getContactHandler).Methods("Get")
 	r.HandleFunc("/contact", postContactHandler).Methods("Post")
-	// r.HandleFunc("/contact/:id", patchContactHandler).Methods("Patch")
+	r.HandleFunc("/contact/{id}", patchContactHandler).Methods("PATCH")
 	// r.HandleFunc("/conatct/:id", deleteContactHandler).Methods("Delete")
 	err := http.ListenAndServe(":4000", r)
 	if err != nil {
@@ -62,7 +62,6 @@ func postContactHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println(reqjsondata)
-	// db[reqjsondata.Name] = reqjsondata.Number
 
 	length := len(contactsDB)
 	newContact := Contact{ID: length + 1, Name: reqjsondata.Name, Number: reqjsondata.Number}
@@ -78,12 +77,35 @@ func postContactHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // update a contact
-// func patchContactHandler(w http.ResponseWriter, r *http.Request) {
+func patchContactHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	num, err := strconv.Atoi(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println(contactsDB[1])
+	body, _ := io.ReadAll(r.Body)
+	var reqjsondata Contact
 
-// 	body, _ := io.ReadAll(r.Body)
+	err = json.Unmarshal(body, &reqjsondata)
+	if err != nil {
+		http.Error(w, "Failed to parse JSON data", http.StatusBadRequest)
+		return
+	}
 
-// 	fmt.Println(body)
-// }
+	if num >= 0 && num < len(contactsDB) {
+		contactsDB[num+1] = Contact{
+			ID:     reqjsondata.ID,
+			Name:   reqjsondata.Name,
+			Number: reqjsondata.Number,
+		}
+		w.WriteHeader(http.StatusOK)
+	} else {
+		http.Error(w, "Contact Not Found", http.StatusNotFound)
+	}
+
+}
 
 // // delete a contact
 // func deleteContactHandler(w http.ResponseWriter, r *http.Request) {
