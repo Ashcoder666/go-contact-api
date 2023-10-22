@@ -25,10 +25,10 @@ func main() {
 	fmt.Println("server is starting on port 4000")
 
 	r := mux.NewRouter()
-	r.HandleFunc("/contact", getContactHandler).Methods("Get")
-	r.HandleFunc("/contact", postContactHandler).Methods("Post")
+	r.HandleFunc("/contact", getContactHandler).Methods("GET")
+	r.HandleFunc("/contact", postContactHandler).Methods("POST")
 	r.HandleFunc("/contact/{id}", patchContactHandler).Methods("PATCH")
-	// r.HandleFunc("/conatct/:id", deleteContactHandler).Methods("Delete")
+	r.HandleFunc("/contact/{id}", deleteContactHandler).Methods("DELETE")
 	err := http.ListenAndServe(":4000", r)
 	if err != nil {
 		log.Fatal(err)
@@ -81,10 +81,11 @@ func patchContactHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	num, err := strconv.Atoi(id)
+	fmt.Println(num)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// fmt.Println(contactsDB[1])
+
 	body, _ := io.ReadAll(r.Body)
 	var reqjsondata Contact
 
@@ -94,11 +95,13 @@ func patchContactHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if num >= 0 && num < len(contactsDB) {
-		contactsDB[num+1] = Contact{
-			ID:     reqjsondata.ID,
-			Name:   reqjsondata.Name,
-			Number: reqjsondata.Number,
+	if num >= 0 && num <= len(contactsDB) {
+
+		for index, contact := range contactsDB {
+			if contact.ID == num {
+				contactsDB[index].Name = reqjsondata.Name
+				contactsDB[index].Number = reqjsondata.Number
+			}
 		}
 		w.WriteHeader(http.StatusOK)
 	} else {
@@ -107,7 +110,31 @@ func patchContactHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// // delete a contact
-// func deleteContactHandler(w http.ResponseWriter, r *http.Request) {
+// delete a contact
+func deleteContactHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
 
-// }
+	// convert into number
+
+	num, _ := strconv.Atoi(id)
+
+	if num != 0 && num <= len(contactsDB) {
+		for index, contact := range contactsDB {
+			if contact.ID == num {
+				fmt.Println(num, index, len(contactsDB)-1)
+				if index == len(contactsDB)-1 {
+					fmt.Println(num, index, len(contactsDB)-1)
+					contactsDB = append(contactsDB[:index])
+				} else {
+					contactsDB = append(contactsDB[:index], contactsDB[index+1:]...)
+				}
+
+				fmt.Println(contactsDB)
+				break
+			}
+		}
+
+		w.Write([]byte("delete succesful"))
+	}
+}
